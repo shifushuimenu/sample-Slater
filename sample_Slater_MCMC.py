@@ -174,7 +174,7 @@ def update_spOBDM(OBDM, r, s):
     # OBDM.R does not change
 
 
-@profile
+#@profile
 def sample_SlaterDeterminant_MCMC(psi, Nsweeps):
     """
         Input:

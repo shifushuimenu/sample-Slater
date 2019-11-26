@@ -1,9 +1,10 @@
 #!/usr/bin/python3.5
 
 import numpy as np
-import numpy.random
 from scipy import linalg
 from profilehooks import profile
+
+from test_suite import prepare_test_system_zeroT
 
 
 def unit(i, M):
@@ -45,7 +46,7 @@ def Slater2spOBDM(U):
         OBDM[i,i] += 1.0
     return OBDM
 
-@profile
+# @profile
 def sample_SlaterDeterminant(U, nu_rndvec):
     """
         Step 2 of the algorithm for direct sampling of a Slater determinant.
@@ -53,7 +54,7 @@ def sample_SlaterDeterminant(U, nu_rndvec):
             arXiv:1806.00472
 
         Input:
-            U: Rectangular MxN matrix representing the Slater determinant
+            U: Rectangular complex MxN matrix representing the Slater determinant
                of N spinless fermions. The columns of U are single-particle states.
             nu_rndvec: A random permutation of the integers [1,2,...,N]
         Output:
@@ -61,7 +62,7 @@ def sample_SlaterDeterminant(U, nu_rndvec):
             Slater determinant. The Fock state is represented as a vector of
             0s and 1s.
     """
-    U = np.array(U); nu_rndvec = np.array(nu_rndvec)
+    U = np.array(U, dtype=np.complex64); nu_rndvec = np.array(nu_rndvec)
     (M,N) = U.shape
     assert ( nu_rndvec.size == N ), "nu_rndvec.size = %d, M = %d" % (nu_rndvec.size, N)
 
@@ -82,7 +83,7 @@ def sample_SlaterDeterminant(U, nu_rndvec):
             row_idx_sample = row_idx + list([x_sample])
             assert (len(col_idx) == len(row_idx_sample))
             # construct submatrix
-            Amat = np.zeros((len(col_idx), len(row_idx_sample)))
+            Amat = np.zeros((len(col_idx), len(row_idx_sample)), dtype=np.complex64)
             for l,j in enumerate(col_idx):
                 for k,i in enumerate(row_idx_sample):
                     Amat[k,l] = U[i,j]
@@ -101,6 +102,9 @@ def prob2cumul( prob_vec ):
         For a vector of unnormalized probabilities, return a vector
         of cumulative probabilities.
     """
+    # REMOVE
+    assert( not any(np.isnan(prob_vec)) ), print("prob_vec=", prob_vec)
+    # REMOVE
     cumul = np.zeros(prob_vec.size)
     ss = 0.0
     for i in range(prob_vec.size):
@@ -117,7 +121,7 @@ def bisection_search( prob, cumul_prob_vec ):
         The indices into cumul_prob[:] start with zero.
     """
     cumul_prob_vec = np.array( cumul_prob_vec )
-    assert( all(cumul_prob_vec >= 0) )
+    assert( all(cumul_prob_vec >= 0) ), print("cumul_prob_vec=", cumul_prob_vec)
     assert( cumul_prob_vec[-1] == 1.0 )
 
     N = cumul_prob_vec.size
@@ -145,7 +149,7 @@ def bisection_search( prob, cumul_prob_vec ):
 def _test():
     import sample_Slater, doctest
     return doctest.testmod(sample_Slater)
-
+    
 
 if __name__ == '__main__':
     # run doctest unit test
@@ -155,24 +159,7 @@ if __name__ == '__main__':
     # ==================================
     import matplotlib.pyplot as plt
 
-    Nsites=21  # should be an odd number
-    i0=int(Nsites/2)
-    V = np.zeros(Nsites)
-    t_hop = 1.0
-    V_max = 1.0*t_hop   # max. value of the trapping potential at the edge of the trap
-                        # (in units of the hopping)
-    V_pot = V_max / i0**2
-    for i in range(Nsites):
-        V[i] = V_pot*(i-i0)**2
-
-    H = np.zeros((Nsites,Nsites), dtype=np.float64)
-    for i in range(Nsites):
-        H[i,i] = V[i]
-        if (i+1 < Nsites):
-            H[i,i+1] = -t_hop
-            H[i+1,i] = -t_hop
-
-    eigvals, U = linalg.eigh(H)
+    Nsites, U = prepare_test_system_zeroT(Nsites=21)
 
     Nparticles=10; Nsamples=500
     eta_vec = np.arange(Nparticles)
