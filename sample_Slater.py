@@ -51,7 +51,7 @@ def sample_SlaterDeterminant(U, nu_rndvec):
     """
         Step 2 of the algorithm for direct sampling of a Slater determinant.
         Reference:
-            arXiv:1806.00472
+            [1] arXiv:1806.00472
 
         Input:
             U: Rectangular complex MxN matrix representing the Slater determinant
@@ -73,7 +73,8 @@ def sample_SlaterDeterminant(U, nu_rndvec):
     # Sample orbitals for N particles iteratively.
     row_idx = []; col_idx = []
     # unnormalized conditional probability cond_prob(x) for choosing orbital x for the
-    # n-th particle
+    # n-th particle (The constant factor 1/(n!) in Ref. [1] can be neglected for the 
+    # unnormalized probability distribution.)
     cond_prob = np.zeros(M)
     for n in range(N):
         cond_prob[...] = 0.0
@@ -84,7 +85,7 @@ def sample_SlaterDeterminant(U, nu_rndvec):
             assert (len(col_idx) == len(row_idx_sample))
             # construct submatrix
             Amat = np.zeros((len(col_idx), len(row_idx_sample)), dtype=np.complex64)
-            for l,j in enumerate(col_idx):
+            for l,j in  enumerate(col_idx):
                 for k,i in enumerate(row_idx_sample):
                     Amat[k,l] = U[i,j]
             cond_prob[x_sample] = abs(linalg.det(Amat))**2
@@ -110,6 +111,10 @@ def prob2cumul( prob_vec ):
     for i in range(prob_vec.size):
         ss += prob_vec[i]
         cumul[i] = ss
+
+    # Make sure that negative values below machine precision are set to zero.
+    cumul[(cumul < 0) & (abs(cumul) < np.finfo('float32').eps)] = 0.0
+
     return cumul / ss
 
 
@@ -121,7 +126,14 @@ def bisection_search( prob, cumul_prob_vec ):
         The indices into cumul_prob[:] start with zero.
     """
     cumul_prob_vec = np.array( cumul_prob_vec )
-    assert( all(cumul_prob_vec >= 0) ), print("cumul_prob_vec=", cumul_prob_vec)
+
+    # TEST
+    for i, p in enumerate(cumul_prob_vec):
+        if (p < 0):
+            cumul_prob_vec[i] *= -1
+    # TEST
+
+    assert( all( cumul_prob_vec >= -np.finfo(float).eps ) ), print("cumul_prob_vec=", cumul_prob_vec)
     assert( cumul_prob_vec[-1] == 1.0 )
 
     N = cumul_prob_vec.size

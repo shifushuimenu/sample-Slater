@@ -31,7 +31,7 @@ def prepare_test_system_zeroT(Nsites=21):
     return (Nsites, U)
 
 
-def prepare_test_system_finiteT(Nsites=21, beta=1.0, mu=0.0):
+def prepare_test_system_finiteT(Nsites=21, beta=1.0, mu=0.0, potential='parabolic'):
     """
         One-dimensional system of free fermions with Nsites sites
         in an external trapping potential. 
@@ -39,6 +39,8 @@ def prepare_test_system_finiteT(Nsites=21, beta=1.0, mu=0.0):
         Input:
             beta = inverse temperature 
             mu = chemical potential 
+            potential: Type of the external potenial which is either 'parabolic'
+               of 'random-binary. 
         Output:
             Return the one-body density matrix (OBDM)
                 <c_i^{\dagger} c_j> = Tr(e^{-beta H}c_i^{\dagger} c_j)
@@ -50,11 +52,20 @@ def prepare_test_system_finiteT(Nsites=21, beta=1.0, mu=0.0):
     i0=int(Nsites/2)
     V = np.zeros(Nsites)
     t_hop = 1.0
-    V_max = 1.0*t_hop   # max. value of the trapping potential at the edge of the trap
+
+    if (potential == 'parabolic'):
+        V_max = 1.0*t_hop   # max. value of the trapping potential at the edge of the trap
                         # (in units of the hopping)
-    V_pot = V_max / i0**2
-    for i in range(Nsites):
-        V[i] = V_pot*(i-i0)**2
+        V_pot = V_max / i0**2
+        for i in range(Nsites):
+            V[i] = V_pot*(i-i0)**2
+    elif (potential == 'random-binary'):
+        absU = 7.2; dtau=0.05
+        alphaU = np.arccosh(np.exp(dtau*absU/2.0))
+        V = alphaU * np.random.random_integers(0,1,size=Nsites)
+    else:
+        print("Unknown type of external potential")
+        exit()
 
     H = np.zeros((Nsites,Nsites), dtype=np.float64)
     for i in range(Nsites):

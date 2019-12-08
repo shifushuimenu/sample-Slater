@@ -1,0 +1,6 @@
+# ignore compiled python modules 
+*.pyc
+# ignore data output files and figures 
+*.dat
+*.txt
+*.png
