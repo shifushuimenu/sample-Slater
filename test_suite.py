@@ -40,14 +40,14 @@ def prepare_test_system_finiteT(Nsites=21, beta=1.0, mu=0.0, potential='paraboli
             beta = inverse temperature 
             mu = chemical potential 
             potential: Type of the external potenial which is either 'parabolic'
-               of 'random-binary. 
+               or 'random-binary. 
         Output:
             Return the one-body density matrix (OBDM)
                 <c_i^{\dagger} c_j> = Tr(e^{-beta H}c_i^{\dagger} c_j)
             and the occupations of natural orbitals (momentum-distribution
             function for a translationally-invariant system) as a vector.
     """
-    assert(Nsites%2==1), "test_suites: Nsites should be an odd number."
+    #assert(Nsites%2==1), "test_suites: Nsites should be an odd number."
 
     i0=int(Nsites/2)
     V = np.zeros(Nsites)
@@ -84,3 +84,19 @@ def prepare_test_system_finiteT(Nsites=21, beta=1.0, mu=0.0, potential='paraboli
     OBDM = np.matmul(np.matmul(U, MDF), U.conj().T)
 
     return (Nsites, beta, mu, np.sort(np.diag(MDF))[::-1], OBDM)
+
+
+def square_region(OBDM, L_A, x0=1, y0=1):
+    """
+        Extract the elements of the OBDM which correspond to a square 
+        region of the real-space lattice of size L_A x L_A.e 
+
+        The lower left corner of the square region has coordinates (1,1).
+    """
+    Ns = OBDM.shape[0]
+    L = int(np.sqrt(float(Ns)))
+ 
+    row_idx = [(x0-1) + i + (y0-1)*L + (j-1)*L for j in range(1,L_A+1) for i in range(1,L_A+1)]
+    col_idx = row_idx 
+
+    return OBDM[np.ix_(row_idx, col_idx)]

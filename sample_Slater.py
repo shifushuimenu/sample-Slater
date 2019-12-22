@@ -46,6 +46,7 @@ def Slater2spOBDM(U):
         OBDM[i,i] += 1.0
     return OBDM
 
+
 # @profile
 def sample_SlaterDeterminant(U, nu_rndvec):
     """
@@ -98,6 +99,155 @@ def sample_SlaterDeterminant(U, nu_rndvec):
     return occ_vec
 
 
+def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
+    """
+        THIS DOES NOT WORK !
+        Input:
+            After singular value decomposition 
+                \exp(-X) = U @ S @ Vh
+            U:  Unitary matrix having left singular values as columns (Slater determinant no. 1)
+            singular_values: 
+            Vh: Unitary matrix having right singular vectors as rows (Slater determinant no. 2).  
+            nu_rndvec: A random permutation of the integers [1,2,...,N]
+        Output:
+            A Fock state of occupation numbers sampled from the input
+            Slater determinants. The Fock state is represented as a vector of
+            0s and 1s.
+    """
+    U = np.array(U, dtype=np.complex64)
+    Vh = np.array(Vh, dtype=np.complex64)
+    singular_values = np.array(singular_values, dtype=np.float32)
+    nu_rndvec = np.array(nu_rndvec, dtype=np.int32)
+
+    print("U.shape=", U.shape)
+    print("Vh.shape=", Vh.shape)
+    print("singular_values=", singular_values)
+
+    assert( U.shape[0] == Vh.shape[1] and U.shape[1] == Vh.shape[0] ), \
+        "shape mismatch: U: (%d, %d), Vh: (%d, %d)" % (U.shape + Vh.shape)
+
+    # M is the number of orbitals, N is the total number of particles 
+    (M,N) = U.shape
+    assert ( nu_rndvec.size == N ), "nu_rndvec.size = %d, M = %d" % (nu_rndvec.size, N)
+    assert ( singular_values.size == N )
+
+    # Occupation numbers of the M orbitals:
+    # occ_vec[i]==1 for occupied and occ_vec[i]==0 for unoccupied i-th orbital.
+    occ_vec = np.zeros(M, dtype=np.int8)
+
+    # Sample orbitals for N particles iteratively.
+    row_idx = []; col_idx = []
+    # unnormalized conditional probability cond_prob(x) for choosing orbital x for the
+    # n-th particle (The constant factor 1/(n!) in Ref. [1] can be neglected for the 
+    # unnormalized probability distribution.)
+    cond_prob = np.zeros(M, dtype=np.float32)
+    for n in range(N):
+        cond_prob[...] = 0.0
+        # collect row and column indices
+        col_idx = col_idx + list([nu_rndvec[n]])
+        for x_sample in range(M):
+            row_idx_sample = row_idx + list([x_sample])
+            assert (len(col_idx) == len(row_idx_sample))
+            # construct submatrix
+            Amat = U[np.ix_(row_idx_sample, col_idx)]
+            Bmat = Vh[np.ix_(col_idx, row_idx_sample)]
+            # product of singular values 
+            zz = np.prod(singular_values[col_idx])
+            xx = abs(linalg.det(Amat)*linalg.det(Bmat)) # avoid neg. prob. of the form -0.00000
+            # print("zz=", zz, "zz*xx=", zz*xx.real)
+            assert( xx.imag == 0 ), 'Product of determinants has imaginary part.'
+            cond_prob[x_sample] = zz * xx.real
+
+        # if (all(cond_prob < 1e-8)):
+        #     occ_vec[:] = 0
+        #     break
+
+        cumul_prob = prob2cumul(cond_prob)
+        x = bisection_search( prob=np.random.rand(), cumul_prob_vec=cumul_prob )
+        occ_vec[x] = 1
+        row_idx = row_idx + list([x])
+
+    return occ_vec
+
+
+def sample_expmX(U, N):
+    """
+        Input:
+            U = exp(-X), an M-by-M matrix representing the free fermion pseudo density matrix. 
+                exp(-X) is not necessarily hermitian.
+                The principal minors of exp(-X) are the marginal probabilities we need. 
+                They can be negative. 
+            N: Number of particles in the given particle number sector: N \in {0,1,...,D}.
+        Output:
+            A Fock state of occupation numbers sampled from the input free-fermion pseudo density matrix.
+            The Fock state carries a sign as well as a reweighting factor.
+    """
+    U = np.array(U, dtype=np.complex64)
+    assert(U.shape[0] == U.shape[1])
+    M = U.shape[0]
+    assert(N<=M)
+
+    # Occupation numbers of the M sites.
+    # occ_vec[i]==1 for occupied and occ_vec[i]==0 for unoccupied i-th site.
+    occ_vec = np.zeros(M, dtype=np.int8)
+    # If a conditional probability is negative, shift the sign to the observable,
+    # i.e. to the Fock state. 
+    sign_vec = np.zeros(M, dtype=np.int8)
+
+    # Sample sites for N particles iteratively.
+    row_idx = []; col_idx = []
+    # The conditional probability cond_prob(x) for choosing site x for the
+    # n-th particle is the ratio of two principal minors of exp(-X).
+    # Since this conditional probability can be negative for a pseudo density matrix,
+    # the absolute value is taken. 
+    cond_prob = np.zeros(M, dtype=np.float32)
+    cond_prob_sign = np.zeros(M, dtype=np.int8)
+    row_idx = []
+    # Sample the positions of N particles. 
+    for nn in range(N):
+        cond_prob[...] = 0.0
+        cond_prob_sign[...] = 0.0
+        # Collect row and column indices, which for a principal minor are the same,
+        # to obtain all elements of the conditional probability.
+        for x_sample in range(M):
+            row_idx_sample = row_idx + list([x_sample])
+            if (len(row_idx) >= 1):
+                # The conditional probability is given as the ratio of principal minors.
+
+                # Method 1: Low-rank update for iterative computation of the matrix inverse. 
+                # Use the block determinant formula, which allows to avoid the computation 
+                # of determinants altogether.
+                                                
+
+                # Method 2: Inverse of submatrix. Singular matrix for subsystem sizes larger than or equal to 5x5. 
+                # Add invertibility noise to make the matrix non-singular. 
+                v1 = U[np.ix_(list([x_sample]), row_idx)]
+                v2 = U[np.ix_(row_idx, list([x_sample]))]
+                dim = len(row_idx)
+                invertibility_noise = (1e-9)*np.random.random((dim,dim))
+                xx = U[x_sample, x_sample] - np.matmul(v1, np.matmul( linalg.inv(U[np.ix_(row_idx, row_idx)] + invertibility_noise), v2))
+
+                # Method 3: Ratio of two determinants. Leads to numerical overflow of the extremely large determinants.
+                #xx = linalg.det(U[np.ix_(row_idx_sample, row_idx_sample)]) / linalg.det(U[np.ix_(row_idx, row_idx)])
+            else:
+                # Determinant of a 1x1 matrix. 
+                xx = U[np.ix_(row_idx_sample, row_idx_sample)]    
+                # assert(xx > 0), "sign problem."
+            assert( xx.imag == 0 ), 'Something is wrong with the determinant. (%15.10f, %15.10f)' % (xx.real, xx.imag)
+            cond_prob[x_sample] = abs(xx.real)
+            cond_prob_sign[x_sample] = np.sign(xx.real)
+
+        cumul_prob = prob2cumul(cond_prob)
+        x = bisection_search( prob=np.random.rand(), cumul_prob_vec=cumul_prob )
+        occ_vec[x] = 1
+        sign_vec[x] = cond_prob_sign[x]
+        row_idx = row_idx + list([x])
+        col_idx = row_idx
+
+    return occ_vec, sign_vec
+
+
+
 def prob2cumul( prob_vec ):
     """
         For a vector of unnormalized probabilities, return a vector
@@ -134,7 +284,7 @@ def bisection_search( prob, cumul_prob_vec ):
     # TEST
 
     assert( all( cumul_prob_vec >= -np.finfo(float).eps ) ), print("cumul_prob_vec=", cumul_prob_vec)
-    assert( cumul_prob_vec[-1] == 1.0 )
+    assert( cumul_prob_vec[-1] == 1.0 ), "cumul_prob_vec[-1]=%15.10f" % cumul_prob_vec[-1]
 
     N = cumul_prob_vec.size
 
