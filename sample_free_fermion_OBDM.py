@@ -144,10 +144,10 @@ def sample_FF_pseudo_density_matrix(OBDM, Nsamples):
         Np = sample_particle_number_sectors(prob_N = p_N)
 
         # 2. Sample the Np-particle reduced density matrix. 
-        occ_vector, sign_vector = sample_expmX(expmX, Np)
-        print('sample nr. =%d'%(ss), occ_vector, sign_vector, "prod(sign_vec)=%d" % (np.prod(sign_vector[abs(sign_vector)>0])))
+        occ_vector, sign_vector, sign, weight = sample_expmX(expmX, Np)
+        print('sample nr. =%d'%(ss), occ_vector, sign_vector, "prod(sign_vec)=%d" % (np.prod(sign_vector[abs(sign_vector)>0])), sign, weight)
 
-        yield occ_vector, sign_vector
+        yield occ_vector, sign_vector, sign, weight
 
 
 def particle_number_distribution(OBDM):
@@ -193,7 +193,7 @@ def sample_particle_number_sectors(prob_N):
     tol=1e-7
     assert(abs(1.0 - sum(prob_N)) < tol)
 
-    cumul_prob = prob2cumul( prob_vec=prob_N )
+    cumul_prob, norm = prob2cumul( prob_vec=prob_N )
     N = bisection_search( prob=np.random.rand(), cumul_prob_vec=cumul_prob )
     
     return N 
@@ -380,7 +380,7 @@ if __name__ == '__main__':
     NsDet=1     # How often is each Slater determinant sampled ? 
     #generate_Fock_states = sample_FF_OBDM(OBDM, Nsamples_per_mode_occ=NsModes, Nsamples_per_Sdet=NsDet)
 
-    generate_Fock_states = sample_FF_pseudo_density_matrix(OBDM=OBDM, Nsamples=10000)
+    generate_Fock_states = sample_FF_pseudo_density_matrix(OBDM=OBDM, Nsamples=4000)
  
     av_density = np.zeros(Nsites)
     av_density_signcorrected = np.zeros(Nsites)
@@ -389,11 +389,11 @@ if __name__ == '__main__':
     av2_sign = np.zeros(Nsites)
 
     ss = 0
-    for occ_vector, sign_vector in generate_Fock_states:
+    for occ_vector, sign_vector, sign, weight in generate_Fock_states:
         ss += 1
         #print('sample nr. =%d'%(ss), occ_vector)
         av_density += occ_vector
-        av_density_signcorrected += occ_vector * np.prod(sign_vector[abs(sign_vector)>0])
+        av_density_signcorrected += occ_vector * sign * weight
         av2_density += occ_vector**2
         av_sign += sign_vector
         av2_sign += sign_vector**2
@@ -406,10 +406,12 @@ if __name__ == '__main__':
     
     sigma_density = np.sqrt(av2_density - av_density**2) / np.sqrt(Nsamples)
     sigma_sign = np.sqrt(av2_sign - av_sign**2) / np.sqrt(Nsamples)
-    print("sum_av_density=", sum(av_density))
     print("sum(np.diag(OBDM))=", sum(np.diag(OBDM)))
-    print(sigma_density)     
-    
+    print("sum_av_density=", sum(av_density))
+    print("sum_av_density_signcorrected=", sum(av_density_signcorrected))    
+    print(av_density)     
+    print(av_density_signcorrected)     
+    print(av_density / av_density_signcorrected) 
 #    # plot
 
     fig, (ax1, ax2) = plt.subplots(2,1)

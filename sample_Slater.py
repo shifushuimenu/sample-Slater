@@ -1,7 +1,7 @@
 #!/usr/bin/python3.5
 
 import numpy as np
-from scipy import linalg
+from scipy import linalg, allclose
 from profilehooks import profile
 
 from test_suite import prepare_test_system_zeroT
@@ -91,7 +91,7 @@ def sample_SlaterDeterminant(U, nu_rndvec):
                     Amat[k,l] = U[i,j]
             cond_prob[x_sample] = abs(linalg.det(Amat))**2
 
-        cumul_prob = prob2cumul(cond_prob)
+        cumul_prob, norm = prob2cumul(cond_prob)
         x = bisection_search( prob=np.random.rand(), cumul_prob_vec=cumul_prob )
         occ_vec[x] = 1
         row_idx = row_idx + list([x])
@@ -162,12 +162,121 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
         #     occ_vec[:] = 0
         #     break
 
-        cumul_prob = prob2cumul(cond_prob)
+        cumul_prob, norm = prob2cumul(cond_prob)
         x = bisection_search( prob=np.random.rand(), cumul_prob_vec=cumul_prob )
         occ_vec[x] = 1
         row_idx = row_idx + list([x])
 
     return occ_vec
+
+
+def sample_FF_GreensFunction(G, Nsamples, update_type='naive'):
+    """
+       Input: 
+            G: Free fermion Green's function G_ij = Tr( \rho c_i c_j^{\dagger} )
+               for a fermionic pseudo density matrix \rho. 
+            Nsamples: Number of occupation number configurations to be generated
+            update_type: 'naive' or 'low-rank'
+               Update the correction due to inter-site correlations either by inverting 
+               a matrix or by a more efficient low-rank update which avoids matrix 
+               inversion altogether.
+       Output:
+            A Fock state of occupation numbers sampled from the input free-fermion 
+            pseudo density matrix.
+            The Fock state carries a sign as well as a reweighting factor.        
+    """
+    G = np.array(G, dtype=np.float32)
+    assert(len(G.shape) == 2)
+    assert(G.shape[0] == G.shape[1])
+
+    # dimension of the single-particle Hilbert space
+    D = G.shape[0]
+
+    corr = np.zeros(D, dtype = np.float32)
+    cond_prob = np.zeros(2, dtype = np.float32)
+
+    for ss in np.arange(Nsamples):
+        corr[...] = 0.0
+        sign = 1.0
+        reweighting_factor = 1.0
+        # component-wise direct sampling (k=0)
+        k=0
+        Ksites = [k]
+        cond_prob[1] = 1.0 - G[k,k]
+        cond_prob[0] = G[k,k]
+        if (np.random.random() < cond_prob[1]):
+            occ_vector = [1]
+        else:
+            occ_vector = [0]
+        occ = occ_vector[0]
+        Xinv = np.zeros((1,1), dtype=np.float32)
+        Xinv[0,0] = 1.0/(G[0,0] - occ)
+        # component-wise direct sampling  (k=1,...,D-1)
+        for k in np.arange(1,D):
+            # "correction" due to correlations between sites
+            if (update_type == 'naive'):
+                corr[k] = np.matmul(G[k, Ksites], np.matmul(linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector)), G[Ksites, k]))
+            elif (update_type == 'low-rank'):
+                # REMOVE
+                corr1 = np.matmul(G[k, Ksites], np.matmul(linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector)), G[Ksites, k]))
+                # REMOVE
+                # low-rank update Xinv based on the previous Xinv             
+                corr[k] = np.matmul( G[k, Ksites], np.matmul( Xinv, G[Ksites, k] ) )
+
+                # # REMOVE
+                # Xinv1 = linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector))
+                # if (True): #(not allclose(Xinv1, Xinv)):
+                #     print(Xinv1)
+                #     print(Xinv)
+                #     #exit()
+                # # REMOVE
+                # REMOVe
+                # print("corr1=", corr1, "corr=", corr[k])
+                # REMOVE
+            else:
+                sys.exit('Error: Unkown update type')
+
+            cond_prob[1] = 1 - G[k,k] + corr[k]
+            cond_prob[0] = G[k,k] - corr[k]
+            # take care of quasi-probability distribution 
+            if ((cond_prob[1] < 0) or (cond_prob[1] > 1)):                
+                if (cond_prob[1] < 0):
+                    norm = 1.0 - 2.0*cond_prob[1]
+                    P = abs(cond_prob[1]) / norm
+                else:
+                    norm = 2.0*cond_prob[1] - 1.0 
+                    P = cond_prob[1] / norm
+                reweighting_factor *= norm
+            else:
+                P = cond_prob[1]
+            if (np.random.random() < P):
+                occ = 1
+                sign *= np.sign(cond_prob[1])
+            else:
+                occ = 0
+                sign *= np.sign(cond_prob[0])
+
+            occ_vector = occ_vector + list([occ])   
+
+            if (update_type == 'low-rank'):
+                # Avoid computation of determiants and inverses altogether
+                # by utilizing the formulae for determinant and inverse of 
+                # block matrices. 
+                g =  1.0/(G[k,k] - occ - corr[k])  #(-1)**occ * 1.0/cond_prob[occ]  # This latter expression also works. 
+                uu = np.matmul(Xinv, G[Ksites, k])
+                vv = np.matmul(G[k, Ksites], Xinv)
+                Xinv_new = np.zeros((k+1,k+1), dtype=np.float32)
+                Xinv_new[np.ix_(Ksites, Ksites)] = Xinv[np.ix_(Ksites, Ksites)] + g*np.outer(uu, vv)
+                Xinv_new[k, Ksites] = -g*vv[Ksites]
+                Xinv_new[Ksites, k] = -g*uu[Ksites]
+                Xinv_new[k,k] = g
+                Xinv = Xinv_new   
+
+            Ksites = Ksites + list([k])
+
+        assert(len(occ_vector) == D)
+
+        yield np.array(occ_vector), sign, reweighting_factor
 
 
 def sample_expmX(U, N):
@@ -201,12 +310,15 @@ def sample_expmX(U, N):
     # Since this conditional probability can be negative for a pseudo density matrix,
     # the absolute value is taken. 
     cond_prob = np.zeros(M, dtype=np.float32)
-    cond_prob_sign = np.zeros(M, dtype=np.int8)
+    cond_prob_signed = np.zeros(M, dtype=np.float32)
+    sign_structure = np.zeros(M, dtype=np.int8)
     row_idx = []
+    reweighting_factor = 1.0 # reweighting factor due to the sign problem 
+    sign = 1
     # Sample the positions of N particles. 
     for nn in range(N):
         cond_prob[...] = 0.0
-        cond_prob_sign[...] = 0.0
+        sign_structure[...] = 0.0
         # Collect row and column indices, which for a principal minor are the same,
         # to obtain all elements of the conditional probability.
         for x_sample in range(M):
@@ -234,24 +346,47 @@ def sample_expmX(U, N):
                 xx = U[np.ix_(row_idx_sample, row_idx_sample)]    
                 # assert(xx > 0), "sign problem."
             assert( xx.imag == 0 ), 'Something is wrong with the determinant. (%15.10f, %15.10f)' % (xx.real, xx.imag)
+            cond_prob_signed[x_sample] = xx.real
             cond_prob[x_sample] = abs(xx.real)
-            cond_prob_sign[x_sample] = np.sign(xx.real)
+            sign_structure[x_sample] = np.sign(xx.real)
 
-        cumul_prob = prob2cumul(cond_prob)
+        cond_prob_signed, norm_signed = normalize(cond_prob_signed)
+        cumul_prob, norm_unsigned = prob2cumul(cond_prob)
         x = bisection_search( prob=np.random.rand(), cumul_prob_vec=cumul_prob )
+        #print(nn, cond_prob_signed, sum(cond_prob_signed[np.where(cond_prob_signed > 0)]), sum(cond_prob_signed[np.where(cond_prob_signed < 0)]), x)        
         occ_vec[x] = 1
-        sign_vec[x] = cond_prob_sign[x]
+        # taking care of the sign problem
+        sign_vec[x] = sign_structure[x]
+        sign *= sign_structure[x]
+        reweighting_factor *= norm_signed / norm_unsigned
+
         row_idx = row_idx + list([x])
         col_idx = row_idx
 
-    return occ_vec, sign_vec
+    return occ_vec, sign_vec, sign, reweighting_factor
 
+
+def normalize( quasi_prob ):
+    """
+        Normalize an array of numbers such that their sum is one.
+        A (small) fraction of the numbers may be negative,
+        thus representing a quasi-probability distribution. 
+
+        Return:
+            - normalized distribution
+            - its normalization constant
+    """
+
+    quasi_prob = np.array(quasi_prob)
+    norm = sum(quasi_prob)
+    #assert(norm > 0), 'Quasi-probability distribution has predominantly negative values: norm=%15.8f.' % (norm)
+    return quasi_prob[:] / norm, norm
 
 
 def prob2cumul( prob_vec ):
     """
         For a vector of unnormalized probabilities, return a vector
-        of cumulative probabilities.
+        of cumulative probabilities and the normalization.
     """
     # REMOVE
     assert( not any(np.isnan(prob_vec)) ), print("prob_vec=", prob_vec)
@@ -265,7 +400,7 @@ def prob2cumul( prob_vec ):
     # Make sure that negative values below machine precision are set to zero.
     cumul[(cumul < 0) & (abs(cumul) < np.finfo('float32').eps)] = 0.0
 
-    return cumul / ss
+    return cumul / ss, ss
 
 
 def bisection_search( prob, cumul_prob_vec ):
