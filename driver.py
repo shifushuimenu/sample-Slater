@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sample_Slater import sample_FF_GreensFunction
 from test_suite import prepare_test_system_finiteT, square_region
 
-(Nsites, beta, mu, MDF, OBDM) = prepare_test_system_finiteT(Nsites=21, beta=5, mu=0.0, potential='random-binary')
+(Nsites, beta, mu, MDF, OBDM) = prepare_test_system_finiteT(Nsites=81, beta=5, mu=0.0, potential='random-binary')
 #OBDM_tot = np.loadtxt("../test_data/OBDM_L16x16_U7.2mu3.6_attractiveHubbard.dat")
 # OBDM = OBDM_tot[np.ix_([102,103],[102,103])]
 #OBDM = square_region(OBDM_tot, L_A=6, x0=1, y0=3)

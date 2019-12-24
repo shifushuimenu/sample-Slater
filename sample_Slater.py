@@ -170,7 +170,7 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
     return occ_vec
 
 
-def sample_FF_GreensFunction(G, Nsamples, update_type='naive'):
+def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     """
        Input: 
             G: Free fermion Green's function G_ij = Tr( \rho c_i c_j^{\dagger} )
@@ -183,7 +183,8 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='naive'):
        Output:
             A Fock state of occupation numbers sampled from the input free-fermion 
             pseudo density matrix.
-            The Fock state carries a sign as well as a reweighting factor.        
+            The Fock state carries a sign as well as a reweighting factor, which takes 
+            care of the sign problem.
     """
     G = np.array(G, dtype=np.float32)
     assert(len(G.shape) == 2)
@@ -199,7 +200,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='naive'):
         corr[...] = 0.0
         sign = 1.0
         reweighting_factor = 1.0
-        # component-wise direct sampling (k=0)
+        # Component-wise direct sampling (k=0)
         k=0
         Ksites = [k]
         cond_prob[1] = 1.0 - G[k,k]
@@ -211,34 +212,19 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='naive'):
         occ = occ_vector[0]
         Xinv = np.zeros((1,1), dtype=np.float32)
         Xinv[0,0] = 1.0/(G[0,0] - occ)
-        # component-wise direct sampling  (k=1,...,D-1)
+        # Component-wise direct sampling  (k=1,...,D-1)
         for k in np.arange(1,D):
-            # "correction" due to correlations between sites
+            # "Correction" due to correlations between sites
             if (update_type == 'naive'):
                 corr[k] = np.matmul(G[k, Ksites], np.matmul(linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector)), G[Ksites, k]))
-            elif (update_type == 'low-rank'):
-                # REMOVE
-                corr1 = np.matmul(G[k, Ksites], np.matmul(linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector)), G[Ksites, k]))
-                # REMOVE
-                # low-rank update Xinv based on the previous Xinv             
+            elif (update_type == 'low-rank'):       
                 corr[k] = np.matmul( G[k, Ksites], np.matmul( Xinv, G[Ksites, k] ) )
-
-                # # REMOVE
-                # Xinv1 = linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector))
-                # if (True): #(not allclose(Xinv1, Xinv)):
-                #     print(Xinv1)
-                #     print(Xinv)
-                #     #exit()
-                # # REMOVE
-                # REMOVe
-                # print("corr1=", corr1, "corr=", corr[k])
-                # REMOVE
             else:
                 sys.exit('Error: Unkown update type')
 
             cond_prob[1] = 1 - G[k,k] + corr[k]
             cond_prob[0] = G[k,k] - corr[k]
-            # take care of quasi-probability distribution 
+            # Take care of quasi-probability distribution 
             if ((cond_prob[1] < 0) or (cond_prob[1] > 1)):                
                 if (cond_prob[1] < 0):
                     norm = 1.0 - 2.0*cond_prob[1]
@@ -262,6 +248,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='naive'):
                 # Avoid computation of determiants and inverses altogether
                 # by utilizing the formulae for determinant and inverse of 
                 # block matrices. 
+                # Compute Xinv based on the previous Xinv. 
                 g =  1.0/(G[k,k] - occ - corr[k])  #(-1)**occ * 1.0/cond_prob[occ]  # This latter expression also works. 
                 uu = np.matmul(Xinv, G[Ksites, k])
                 vv = np.matmul(G[k, Ksites], Xinv)
