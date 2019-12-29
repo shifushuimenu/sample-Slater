@@ -1,7 +1,49 @@
 #!/usr/bin/python3.5
+"""
+    Routines for benchmarking the scheme of direct sampling of 
+    free fermion pseudo density matrices. 
+"""
 
 import numpy as np
 from scipy import linalg
+
+
+def occ2int_spinless(occ_vector):
+    """
+        Map a spinless fermion occupation vector to an integer by interpreting 
+        the occupation vector as the binary prepresentation of 
+        an integer with the most significant bit to the right. 
+        
+            occ_vector = [1, 0, 1, 0]   ->   integer = 5
+    """
+    occ_vector = np.array(occ_vector, dtype=np.int8)
+    s = 0
+    for k in range(len(occ_vector)):
+        if (occ_vector[k] == 1):
+            s = s + 2**k
+    return s  
+
+
+def occ2int_spinful(occ_vector_up, occ_vector_dn):
+    """
+        Combine the occupation vectors for spin up and spin down 
+        and map the resulting combined occupation vector to 
+        an integer. The most significant bit is to the right.
+
+        Example:
+        ========
+            occ_vector_up = [1, 0, 0, 1]
+            occ_vector_dn = [0, 1, 1, 0]
+            [occ_vector_up, occ_vector_dn] = [1, 0, 0, 1; 0, 1, 1, 0]  -> integer = 105
+    """
+    assert(len(occ_vector_up) == len(occ_vector_dn))
+    occ_vector_up = np.array(occ_vector_up)
+    occ_vector_dn = np.array(occ_vector_dn)
+    occ_vector = np.hstack((occ_vector_up, occ_vector_dn))
+    print(occ_vector)
+
+    return occ2int_spinless(occ_vector)
+
 
 def prepare_test_system_zeroT(Nsites=21):
     """

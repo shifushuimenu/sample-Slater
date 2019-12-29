@@ -172,6 +172,9 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
 
 def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     """
+       Component-wise sampling of site occupations from a free fermion
+       pseudo density matrix in the grand-canonical ensemble.
+
        Input: 
             G: Free fermion Green's function G_ij = Tr( \rho c_i c_j^{\dagger} )
                for a fermionic pseudo density matrix \rho. 
