@@ -41,12 +41,12 @@ def read_GreenF(file_object, dtype=np.complex64):
        Input: 
        ======
           file_object: an open file handle
-          dtype: np.complex64 or np.float32
+          dtype: np.complex64 or np.float64
        
        Returns:
        ========
           A generator object yielding a complex matrix. 
-          If dtype=np.float32, the imaginary parts of the matrix elements
+          If dtype=np.float64, the imaginary parts of the matrix elements
           are discarded. 
    """
 
@@ -80,7 +80,7 @@ def read_GreenF(file_object, dtype=np.complex64):
            rows.append([F2PY_cmplx(c) for c in fields])
 
 
-def read_GreenF_spinful(file_object_tuple, dtype=np.float32):
+def read_GreenF_spinful(file_object_tuple, dtype=np.float64):
    """
        Read the equal-time Green's function, which is a complex 
        matrix, from a file with complex numbers written in Fortran format,
@@ -100,19 +100,19 @@ def read_GreenF_spinful(file_object_tuple, dtype=np.float32):
        Input: 
        ======
           file_object_tuple: a tuple of open file handles of length 'Nspecies' 
-          dtype: np.complex64 or np.float32
+          dtype: np.complex64 or np.float64
        
        Returns:
        ========
           A generator object yielding an array of complex matrices of length 'Nspecies'. 
-          If dtype=np.float32, the imaginary parts of the matrix elements
+          If dtype=np.float64, the imaginary parts of the matrix elements
           are discarded. 
 
        Note: Each input file containing Green's functions must be terminated 
              by two empty lines. 
    """
 
-   assert(dtype in (np.complex64, np.float32)), 'Unknown data type in input file.'
+   assert(dtype in (np.complex64, np.float64)), 'Unknown data type in input file.'
 
    Nspecies = len(file_object_tuple)
    file_objects = tuple(file_object_tuple)
@@ -157,7 +157,7 @@ def read_GreenF_spinful(file_object_tuple, dtype=np.float32):
                             G_tot.append(G)
                             # Yield the Green's functions for a given HS sample as a stack
                             # of matrices for different spin species. 
-                            G_out = np.array(G_tot.copy(), dtype=dtype)
+                            G_out = np.array(G_tot, dtype=dtype).copy()
                             G_tot = []
                             print("yielding G")
                             yield G_out 
@@ -176,7 +176,7 @@ def read_GreenF_spinful(file_object_tuple, dtype=np.float32):
 if __name__ == '__main__':
 
 #    with open('Green_dn_several.dat') as fh:
-#        for counter, G in enumerate(read_GreenF(fh, dtype=np.float32)):
+#        for counter, G in enumerate(read_GreenF(fh, dtype=np.float64)):
 #            if (counter >= 4):
 #                break
 #            print(G)

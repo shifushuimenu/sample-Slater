@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy import linalg, allclose
-from profilehooks import profile
+# from profilehooks import profile # python2.7
 
 from test_suite import prepare_test_system_zeroT
 
@@ -172,7 +172,7 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
 
 def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     """
-       Component-wise sampling of site occupations from a free fermion
+       Component-wise sampling of site occupations from a spinless free fermion
        pseudo density matrix in the grand-canonical ensemble.
 
        Input: 
@@ -267,6 +267,54 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
         assert(len(occ_vector) == D)
 
         yield np.array(occ_vector), sign, reweighting_factor
+
+
+
+def rotate_GreensFunction(G_up, G_dn, quant_axis):
+    """
+        Construct the block Green's function after a local rotation 
+        in spin space. 
+
+        Input:
+            G_up, G_dn: Ns x Ns matrices, the Green's functions for spin up and spin down. 
+            quant_axis: 'x' or 'y', the local quantization axis w.r.t. which spin up and spin down
+                   are interpreted
+        Output:
+            G_block: (2Ns) x (2Ns) matrix                       
+
+        Comment:
+            While the single-particle Green's function in the z-basis is block
+            diagonal between spin up and spin down, there are off-diagonal 
+            elements in the x- and y-basis (or any other basis which results 
+            from a local rotation in spin space).
+            In these cases the weight of a Fock configuration does not factorize
+            and it is not sufficient to sample the spin components separately.
+
+            The solution is to treat the spin orbitals as additional sites 
+            and perform componentwise sampling of 2*N_s sites.         
+    """
+    G_up = np.array(G_up, dtype=np.complex64)
+    G_dn = np.array(G_dn, dtype=np.complex64)
+    assert(G_up.shape == G_dn.shape)
+    Ns = G_up.shape[0]
+
+    # rotation matrices for spin-1/2
+    if (quant_axis == 'x'):
+        R = np.array([[1, 1], [-1, 1]], dtype=np.complex64) / np.sqrt(2)
+    elif (quant_axis == 'y'):
+        R = np.array([[1, 1j], [1j, 1]], dtype=np.complex64) / np.sqrt(2)
+    elif (quant_axis == 'z'): 
+        # identity rotation
+        R = np.array([[1,0],[0,1]], dtype=np.complex64)
+    else:        
+        print('Unknown quantization axis')
+        exit()
+    RR = np.kron(R, np.eye(Ns))
+    G_updn_z = np.kron(np.array([[1,0],[0,0]]), G_up) + np.kron(np.array([[0,0],[0,1]]), G_dn)
+    G_block = np.matmul(np.matmul(RR, G_updn_z), RR.conj().transpose())
+
+    return G_block
+
 
 
 def sample_expmX(U, N):
@@ -379,7 +427,7 @@ def prob2cumul( prob_vec ):
         of cumulative probabilities and the normalization.
     """
     # REMOVE
-    assert( not any(np.isnan(prob_vec)) ), print("prob_vec=", prob_vec)
+    assert( not any(np.isnan(prob_vec)) ) #, print("prob_vec=", prob_vec)   # python2.7
     # REMOVE
     cumul = np.zeros(prob_vec.size)
     ss = 0.0
@@ -408,7 +456,7 @@ def bisection_search( prob, cumul_prob_vec ):
             cumul_prob_vec[i] *= -1
     # TEST
 
-    assert( all( cumul_prob_vec >= -np.finfo(float).eps ) ), print("cumul_prob_vec=", cumul_prob_vec)
+    assert( all( cumul_prob_vec >= -np.finfo(float).eps ) )# , print("cumul_prob_vec=", cumul_prob_vec) # python2.7
     assert( cumul_prob_vec[-1] == 1.0 ), "cumul_prob_vec[-1]=%15.10f" % cumul_prob_vec[-1]
 
     N = cumul_prob_vec.size
