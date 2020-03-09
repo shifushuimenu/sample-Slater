@@ -24,7 +24,7 @@ def occ2int_spinless(occ_vector):
     return s  
 
 
-def occ2int_spinful(occ_vector_up, occ_vector_dn):
+def occ2int_spinful(occ_vector_up, occ_vector_dn, debug=False):
     """
         Combine the occupation vectors for spin up and spin down 
         and map the resulting combined occupation vector to 
@@ -40,7 +40,9 @@ def occ2int_spinful(occ_vector_up, occ_vector_dn):
     occ_vector_up = np.array(occ_vector_up)
     occ_vector_dn = np.array(occ_vector_dn)
     occ_vector = np.hstack((occ_vector_up, occ_vector_dn))
-    print(occ_vector)
+    
+    if (debug):
+        print(occ_vector)
 
     return occ2int_spinless(occ_vector)
 

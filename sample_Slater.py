@@ -176,8 +176,8 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
        pseudo density matrix in the grand-canonical ensemble.
 
        Input: 
-            G: Free fermion Green's function G_ij = Tr( \rho c_i c_j^{\dagger} )
-               for a fermionic pseudo density matrix \rho. 
+            G: Free fermion Green's function G_ij = Tr( \\rho c_i c_j^{\\dagger} )
+               for a fermionic pseudo density matrix \\rho. 
             Nsamples: Number of occupation number configurations to be generated
             update_type: 'naive' or 'low-rank'
                Update the correction due to inter-site correlations either by inverting 
@@ -436,7 +436,7 @@ def prob2cumul( prob_vec ):
         cumul[i] = ss
 
     # Make sure that negative values below machine precision are set to zero.
-    cumul[(cumul < 0) & (abs(cumul) < np.finfo('float32').eps)] = 0.0
+    cumul[(cumul < 0) & (abs(cumul) < np.finfo('float64').eps)] = 0.0
 
     return cumul / ss, ss
 

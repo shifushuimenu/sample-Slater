@@ -152,14 +152,14 @@ def read_GreenF_spinful(file_object_tuple, dtype=np.float64):
                         rows=[]
                         assert(G.shape[0] == G.shape[1]), \
                             'Green\'s function must be square matrix. G.shape= (%d, %d)' % (G.shape[0], G.shape[1])
-                        print('appending G, species=%d' % species)                
+                        ##  print('appending G, species=%d' % species)                
                         if (species == (Nspecies-1)):
                             G_tot.append(G)
                             # Yield the Green's functions for a given HS sample as a stack
                             # of matrices for different spin species. 
                             G_out = np.array(G_tot, dtype=dtype).copy()
                             G_tot = []
-                            print("yielding G")
+                            ## print("yielding G")
                             yield G_out 
                             break
                         else:

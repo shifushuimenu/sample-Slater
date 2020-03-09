@@ -11,6 +11,7 @@ import resource
 import os 
 
 from mpi4py import MPI
+import argparse
 
 from sample_Slater import sample_FF_GreensFunction
 
@@ -22,17 +23,39 @@ comm = MPI.COMM_WORLD
 MPI_rank = comm.Get_rank()
 MPI_size = comm.Get_size()
 
-# check that mpi works correctly
-print("rank %5.5d of %5.5d" % (MPI_rank, MPI_size))
 
+parser = argparse.ArgumentParser(
+    description="Sample Fock states ('snapshots') from fermionic pseudo-density matrices\
+        as they arise naturally in finite-temperature determinantal QMC. The Green's functions\
+        are assumed to be stored in the two synchronized files\
+            `'GreenF_ncpu%5.5d_up.dat' % (MPI_rank)` and\
+            `'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank)`\
+        with different HS samples separated by two empty lines.")
+parser.add_argument("NsitesA", type=int, 
+    help="Number of sites on subsystem A, where the sampling occurs.")
+parser.add_argument("list_of_sitearrays_file", metavar="filename", type=str,
+    help="File with a list of sitearrays in the form `0 1 3 2\\n 8 9 16 17\\n...`\
+         which specify the subsystems A (for exploiting translational invariance).\
+         The length of each sitearray must match `NsitesA`.")    
+parser.add_argument("--max_HS_samples", type=int,
+    help="Maximum number of Green's functions to be read from file.")
+parser.add_argument("--Nsamples_per_HS", type=int,
+    help="Number of Fock states generated per Hubbard-Stratonovich (HS) field configuration.")
+parser.add_argument("--skip", metavar="Nskip", type=int,
+    help="Skip the first `Nskip` Green's functions entries from the file.")
+args = parser.parse_args()
 
-Nsites = 4
-list_of_sitearrays = ([0, 1, 3, 2],)
+Nsites = args.NsitesA
+A = np.loadtxt(args.list_of_sitearrays_file, dtype=int) #([0, 1, 3, 2],) # Note the last comma !
+list_of_sitearrays = tuple(l for l in A.reshape(-1, A.shape[1]))
 assert(isinstance(list_of_sitearrays, tuple))
 assert(np.all([len(a)==Nsites for a in list_of_sitearrays]))
-max_HS_samples = 5
-Nsamples_per_HS = 50
-skip = 0
+max_HS_samples = args.max_HS_samples
+Nsamples_per_HS = args.Nsamples_per_HS
+skip = args.skip
+
+# check that mpi works correctly
+print("rank %5.5d of %5.5d" % (MPI_rank, MPI_size))
 
 N_spin_species = 2
 dimH1 = dimH2 = 2**Nsites
@@ -95,7 +118,7 @@ with open(Green_infile[0]) as fh_up:
                     weight = weight_updn[0, i] * weight_updn[1, i]
                     sign = sign_updn[0, i] * sign_updn[1, i]
 
-                    idx = occ2int_spinful(occ_vector_up, occ_vector_dn)
+                    idx = occ2int_spinful(occ_vector_up, occ_vector_dn, debug=False)
                     prob_Fock_states[idx] += sign * weight
                     prob_Fock_states2[idx] += weight**2
                     ss += 1
