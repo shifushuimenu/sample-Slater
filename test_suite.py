@@ -19,6 +19,10 @@ def occ2int_spinless(occ_vector):
     occ_vector = np.array(occ_vector, dtype=np.int8)
     s = 0
     for k in range(len(occ_vector)):
+        # least significant bit to the right
+        # if (occ_vector[-(k+1)] == 1):
+        #     s = s + 2**k
+        # least significant bit to the left            
         if (occ_vector[k] == 1):
             s = s + 2**k
     return s  
@@ -45,6 +49,35 @@ def occ2int_spinful(occ_vector_up, occ_vector_dn, debug=False):
         print(occ_vector)
 
     return occ2int_spinless(occ_vector)
+
+
+def int2occ_spinful(integer, Nsites):
+    """
+        Convert the integer representing an occupation number vector
+        for spin up and spin down into a bitstring. 
+
+        Example:
+        ========
+            occ_vector_up = [1, 0, 0, 1]
+            occ_vector_dn = [0, 1, 1, 0]
+            integer = 105 -> [occ_vector_up, occ_vector_dn] = [1, 0, 0, 1; 0, 1, 1, 0]     
+    """
+    Nspecies = 2
+
+    # least significant bit to the right 
+    i = integer 
+    bitstring = []
+    while(i != 0):
+        bit = i % 2
+        bitstring.insert(0, bit)
+        i = i // 2
+    # write leading zeros
+    for _ in range(Nspecies*Nsites - len(bitstring)):
+        bitstring.insert(0, 0)
+
+    assert(len(bitstring) == 2*Nsites)
+
+    return bitstring 
 
 
 def prepare_test_system_zeroT(Nsites=21):

@@ -116,7 +116,7 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
     """
     U = np.array(U, dtype=np.complex64)
     Vh = np.array(Vh, dtype=np.complex64)
-    singular_values = np.array(singular_values, dtype=np.float32)
+    singular_values = np.array(singular_values, dtype=np.float64)
     nu_rndvec = np.array(nu_rndvec, dtype=np.int32)
 
     print("U.shape=", U.shape)
@@ -140,7 +140,7 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
     # unnormalized conditional probability cond_prob(x) for choosing orbital x for the
     # n-th particle (The constant factor 1/(n!) in Ref. [1] can be neglected for the 
     # unnormalized probability distribution.)
-    cond_prob = np.zeros(M, dtype=np.float32)
+    cond_prob = np.zeros(M, dtype=np.float64)
     for n in range(N):
         cond_prob[...] = 0.0
         # collect row and column indices
@@ -172,7 +172,7 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
 
 def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     """
-       Component-wise sampling of site occupations from a spinless free fermion
+       Component-wise sampling of site occupations from a *spinless* free fermion
        pseudo density matrix in the grand-canonical ensemble.
 
        Input: 
@@ -187,18 +187,20 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             A Fock state of occupation numbers sampled from the input free-fermion 
             pseudo density matrix.
             The Fock state carries a sign as well as a reweighting factor, which takes 
-            care of the sign problem.
+            care of the sign problem (I), which is due to the fact that the pseudo density 
+            matrix is non-Hermitian.
     """
-    G = np.array(G, dtype=np.float32)
+    G = np.array(G, dtype=np.float64)
     assert(len(G.shape) == 2)
     assert(G.shape[0] == G.shape[1])
 
     # dimension of the single-particle Hilbert space
     D = G.shape[0]
 
-    corr = np.zeros(D, dtype = np.float32)
-    cond_prob = np.zeros(2, dtype = np.float32)
+    corr = np.zeros(D, dtype = np.float64)
+    cond_prob = np.zeros(2, dtype = np.float64)
 
+    print("==========================")
     for ss in np.arange(Nsamples):
         corr[...] = 0.0
         sign = 1.0
@@ -213,7 +215,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
         else:
             occ_vector = [0]
         occ = occ_vector[0]
-        Xinv = np.zeros((1,1), dtype=np.float32)
+        Xinv = np.zeros((1,1), dtype=np.float64)
         Xinv[0,0] = 1.0/(G[0,0] - occ)
         # Component-wise direct sampling  (k=1,...,D-1)
         for k in np.arange(1,D):
@@ -222,6 +224,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
                 corr[k] = np.matmul(G[k, Ksites], np.matmul(linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector)), G[Ksites, k]))
             elif (update_type == 'low-rank'):       
                 corr[k] = np.matmul( G[k, Ksites], np.matmul( Xinv, G[Ksites, k] ) )
+                print("correction=", corr[k])
             else:
                 sys.exit('Error: Unkown update type')
 
@@ -255,7 +258,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
                 g =  1.0/(G[k,k] - occ - corr[k])  #(-1)**occ * 1.0/cond_prob[occ]  # This latter expression also works. 
                 uu = np.matmul(Xinv, G[Ksites, k])
                 vv = np.matmul(G[k, Ksites], Xinv)
-                Xinv_new = np.zeros((k+1,k+1), dtype=np.float32)
+                Xinv_new = np.zeros((k+1,k+1), dtype=np.float64)
                 Xinv_new[np.ix_(Ksites, Ksites)] = Xinv[np.ix_(Ksites, Ksites)] + g*np.outer(uu, vv)
                 Xinv_new[k, Ksites] = -g*vv[Ksites]
                 Xinv_new[Ksites, k] = -g*uu[Ksites]
@@ -347,8 +350,8 @@ def sample_expmX(U, N):
     # n-th particle is the ratio of two principal minors of exp(-X).
     # Since this conditional probability can be negative for a pseudo density matrix,
     # the absolute value is taken. 
-    cond_prob = np.zeros(M, dtype=np.float32)
-    cond_prob_signed = np.zeros(M, dtype=np.float32)
+    cond_prob = np.zeros(M, dtype=np.float64)
+    cond_prob_signed = np.zeros(M, dtype=np.float64)
     sign_structure = np.zeros(M, dtype=np.int8)
     row_idx = []
     reweighting_factor = 1.0 # reweighting factor due to the sign problem 

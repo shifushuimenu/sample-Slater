@@ -5,7 +5,7 @@
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
+from scipy import linalg 
 import time
 import resource
 import os 
@@ -23,14 +23,14 @@ comm = MPI.COMM_WORLD
 MPI_rank = comm.Get_rank()
 MPI_size = comm.Get_size()
 
-
 parser = argparse.ArgumentParser(
     description="Sample Fock states ('snapshots') from fermionic pseudo-density matrices\
         as they arise naturally in finite-temperature determinantal QMC. The Green's functions\
         are assumed to be stored in the two synchronized files\
             `'GreenF_ncpu%5.5d_up.dat' % (MPI_rank)` and\
             `'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank)`\
-        with different HS samples separated by two empty lines.")
+        with different HS samples separated by two empty lines and `MPI_rank` labelling\
+        independent Markov chains.")
 parser.add_argument("NsitesA", type=int, 
     help="Number of sites on subsystem A, where the sampling occurs.")
 parser.add_argument("list_of_sitearrays_file", metavar="filename", type=str,
@@ -47,7 +47,7 @@ args = parser.parse_args()
 
 Nsites = args.NsitesA
 A = np.loadtxt(args.list_of_sitearrays_file, dtype=int) #([0, 1, 3, 2],) # Note the last comma !
-list_of_sitearrays = tuple(l for l in A.reshape(-1, A.shape[1]))
+list_of_sitearrays = tuple(l for l in A.reshape(-1, A.shape[-1]))
 assert(isinstance(list_of_sitearrays, tuple))
 assert(np.all([len(a)==Nsites for a in list_of_sitearrays]))
 max_HS_samples = args.max_HS_samples
@@ -65,7 +65,7 @@ prob_Fock_states2 = np.zeros(dimH, dtype=np.float64)
 
 Green_infile = ('GreenF_ncpu%5.5d_up.dat' % (MPI_rank),
                 'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank))
-# Check that files exist.                               
+# Check that the files exist.                               
 if not np.all([os.path.isfile(f) for f in Green_infile]):
     print("Green's function files not found.")
     exit()
@@ -85,6 +85,13 @@ with open(Green_infile[0]) as fh_up:
                 continue
             if (counter >= max_HS_samples):
                 break
+
+            # If the Hamiltonian itself already exhibits a sign problem (II), 
+            # then the Fock states generated in the sampling procedure 
+            # need to be reweighted. 
+            BSS_weight = 1.0
+            for species in np.arange(N_spin_species):
+                BSS_weight *= linalg.det(np.eye(*G[species].shape) + G[species])
 
             ss_HS += 1
             # print("ss_HS=", ss_HS)
