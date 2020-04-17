@@ -3,9 +3,8 @@
     Sample Fock states from a stream of Green's functions for different Hubbard-Stratonovich 
     field configurations, for two spin species. 
 """
-
 import numpy as np
-from scipy import linalg 
+from numpy import linalg 
 import time
 import resource
 import os 
@@ -89,9 +88,11 @@ with open(Green_infile[0]) as fh_up:
             # If the Hamiltonian itself already exhibits a sign problem (II), 
             # then the Fock states generated in the sampling procedure 
             # need to be reweighted. 
+            # INCOMPLETE
             BSS_weight = 1.0
             for species in np.arange(N_spin_species):
                 BSS_weight *= linalg.det(np.eye(*G[species].shape) + G[species])
+            # INCOMPLETE                
 
             ss_HS += 1
             # print("ss_HS=", ss_HS)
@@ -105,6 +106,8 @@ with open(Green_infile[0]) as fh_up:
                 sign_updn[...] = 0
 
                 for species in np.arange(N_spin_species):
+                    print("===========================")
+                    print("species=%d"%(species))
                     # generator object
                     generate_Fock_states = sample_FF_GreensFunction(G=G[species][np.ix_(
                         sitesA, sitesA)], Nsamples=Nsamples_per_HS, update_type='low-rank')
@@ -130,7 +133,6 @@ with open(Green_infile[0]) as fh_up:
                     prob_Fock_states2[idx] += weight**2
                     ss += 1
 
-
 Nsamples = ss
 N_HS_samples = ss_HS
 prob_Fock_states /= float(Nsamples)
@@ -148,7 +150,7 @@ column_labelling = "# state index  |  probability   |  standard deviation \
 header = '# direct componentwise sampling: max_HS_samples = %d, Nsamples_per_HS = %d' \
     % (max_HS_samples, Nsamples_per_HS)
 header_labels = header + "\n" + column_labelling
-np.savetxt('prob_Fock_ncpu%5.5d.dat' % (MPI_rank), MM, header=header_labels)
+np.savetxt('prob_Fock_ncpu%5.5d_componentwise.dat' % (MPI_rank), MM, header=header_labels)
 
 # ===================================================
 # MPI reduce: Average over independent Markov chains.
@@ -177,4 +179,4 @@ if MPI_rank == 0:
         (np.arange(dimH), prob_Fock_allCPUs[:], sigma_allCPUs[:])).transpose()
     header = header + "\nNumber of independent Markov chains = %d" % (MPI_size)
     header_labels = header + "\n" + column_labelling
-    np.savetxt('prob_Fock_allCPUs.dat', MM_allCPUs, header=header_labels)
+    np.savetxt('prob_Fock_allCPUs_componentwise.dat', MM_allCPUs, header=header_labels)

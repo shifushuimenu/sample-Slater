@@ -18,8 +18,8 @@ N_spin_species = 2
 Nsites = 4
 dimH1 = dimH2 = 2**Nsites
 dimH = dimH1*dimH2
-prob_Fock_states = np.zeros(dimH, dtype=np.float32)
-prob_Fock_states2 = np.zeros(dimH, dtype=np.float32)
+prob_Fock_states = np.zeros(dimH, dtype=np.float64)
+prob_Fock_states2 = np.zeros(dimH, dtype=np.float64)
 
 Green_infile = ('Green_up.dat', 'Green_dn.dat')
 
@@ -30,12 +30,12 @@ ss_HS=0
 
 Nsamples_per_HS = 100
 Fock_states_updn = np.zeros((N_spin_species, Nsamples_per_HS, Nsites), dtype = np.int8)
-weight_updn = np.zeros((N_spin_species, Nsamples_per_HS), dtype = np.float32)
+weight_updn = np.zeros((N_spin_species, Nsamples_per_HS), dtype = np.float64)
 sign_updn = np.zeros((N_spin_species, Nsamples_per_HS), dtype = np.int8)
 
 with open(Green_infile[0]) as fh_up:
     with open(Green_infile[1]) as fh_dn:
-        for counter, G in enumerate(read_GreenF_spinful((fh_up, fh_dn), dtype=np.float32)):
+        for counter, G in enumerate(read_GreenF_spinful((fh_up, fh_dn), dtype=np.float64)):
             if (counter < skip):
                 continue
             if (counter >= max_HS_samples):
@@ -45,7 +45,7 @@ with open(Green_infile[0]) as fh_up:
             print("ss_HS=", ss_HS)
 
             # subsystem A
-            for sitesA in ([0,1,3,2],): #([0,1,4,5], [2,3,6,7], [8,9,12,13], [10,11,14,15]):
+            for sitesA in ([0,1,4,5],): #([0,1,4,5], [2,3,6,7], [8,9,12,13], [10,11,14,15]):
 
                 Fock_states_updn[...] = 0
                 weight_updn[...] = 0.0

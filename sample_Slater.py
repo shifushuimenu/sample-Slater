@@ -1,6 +1,8 @@
 #!/usr/bin/python3.5
 
 import numpy as np
+import sys 
+
 from scipy import linalg, allclose
 # from profilehooks import profile # python2.7
 
@@ -179,6 +181,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             G: Free fermion Green's function G_ij = Tr( \\rho c_i c_j^{\\dagger} )
                for a fermionic pseudo density matrix \\rho. 
             Nsamples: Number of occupation number configurations to be generated
+               from the given pseudo density matrix.
             update_type: 'naive' or 'low-rank'
                Update the correction due to inter-site correlations either by inverting 
                a matrix or by a more efficient low-rank update which avoids matrix 
@@ -187,7 +190,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             A Fock state of occupation numbers sampled from the input free-fermion 
             pseudo density matrix.
             The Fock state carries a sign as well as a reweighting factor, which takes 
-            care of the sign problem (I), which is due to the fact that the pseudo density 
+            care of the sign problem (type I), which is due to the fact that the pseudo density 
             matrix is non-Hermitian.
     """
     G = np.array(G, dtype=np.float64)
@@ -200,8 +203,9 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     corr = np.zeros(D, dtype = np.float64)
     cond_prob = np.zeros(2, dtype = np.float64)
 
-    print("==========================")
+    #print("==========================")
     for ss in np.arange(Nsamples):
+        #print("isample_per_HS=%d"%(ss))
         corr[...] = 0.0
         sign = 1.0
         reweighting_factor = 1.0
@@ -214,6 +218,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             occ_vector = [1]
         else:
             occ_vector = [0]
+        #print("k=%d, <n_k>=%f"%(k, 1-G[k,k]))
         occ = occ_vector[0]
         Xinv = np.zeros((1,1), dtype=np.float64)
         Xinv[0,0] = 1.0/(G[0,0] - occ)
@@ -224,11 +229,15 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
                 corr[k] = np.matmul(G[k, Ksites], np.matmul(linalg.inv(G[np.ix_(Ksites,Ksites)] - np.diag(occ_vector)), G[Ksites, k]))
             elif (update_type == 'low-rank'):       
                 corr[k] = np.matmul( G[k, Ksites], np.matmul( Xinv, G[Ksites, k] ) )
-                print("correction=", corr[k])
             else:
                 sys.exit('Error: Unkown update type')
 
             cond_prob[1] = 1 - G[k,k] + corr[k]
+
+            #with open("corr_k%d.dat"%(k), 'a') as fh:
+            #    fh.write("%16.10f\n"%(corr[k]))
+            #print("k=%d, <n_k>=%f, correction=%f"%(k, 1-G[k,k], corr[k]), occ_vector)
+            
             cond_prob[0] = G[k,k] - corr[k]
             # Take care of quasi-probability distribution 
             if ((cond_prob[1] < 0) or (cond_prob[1] > 1)):                
