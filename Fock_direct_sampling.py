@@ -1,12 +1,12 @@
 #!/usr/bin/python3.5
 """
     Sample Fock states from a stream of Green's functions for different Hubbard-Stratonovich 
-    field configurations, for two spin species, and produce a stream of Fock states
+    field configurations, for two spin species, and produce a stream of Fock states.
     
     Input: Green's functions for spin up and down
 
     Output: - Fock states for spin up and spin down
-            - the reweighting factor
+            - the sign (type I) and reweighting factor of each Fock state
 """
 import numpy as np
 from numpy import linalg 
@@ -68,7 +68,11 @@ outfile = ('Fock_samples_ncpu%5.5d_up.dat' % (MPI_rank),
            'Fock_samples_ncpu%5.5d_dn.dat' % (MPI_rank))
 for s in np.arange(N_spin_species):
     out_fh = open(outfile[s], 'w')
-    out_fh.write("# sign   |    reweighting factor   |   occupation vector (one spin species only) \n#\n")
+    out_fh.write("# The sampling of a pseudofermion density matrix results in a sign problem (type I).")
+    out_fh.write("# Additionally there may be a sign problem arising from the BSS algorithm itself (type II).")
+    out_fh.write("# The weight of a Hubbard-Stratonovich configuration (BSS weight) is not needed.")
+    out_fh.write("# It is output anyways to check for numerical overflow, which would make the reported sign invalid.")
+    out_fh.write("# BSS sign (type II)  |   BSS weight  |   sign (type I )  |   reweighting factor   |   occupation vector (one spin species only) \n#\n")
     out_fh.close()
 
 # Check that the files exist.                               
@@ -105,14 +109,14 @@ with open(Green_infile[0]) as fh_up:
             if (counter >= max_HS_samples):
                 break
 
-            # If the Hamiltonian itself already exhibits a sign problem (II), 
-            # then the Fock states generated in the sampling procedure 
-            # need to be reweighted. 
-            # INCOMPLETE
+            # If the Hamiltonian itself already exhibits a sign problem 
+            # (sign problem of type II), then the Fock states generated in the 
+            # sampling procedure need to be reweighted. 
+            # 'BSS' stands for Blankenbecler-Scalapino-Sugar as in the BSS algorithm. 
             BSS_weight = 1.0
             for species in np.arange(N_spin_species):
                 BSS_weight *= linalg.det(np.eye(*G[species].shape) + G[species])
-            # INCOMPLETE                
+            BSS_sign = np.sign(BSS_weight)               
 
             ss_HS += 1 
 
@@ -129,7 +133,7 @@ with open(Green_infile[0]) as fh_up:
                     for occ_vector, sign, weight in generate_Fock_states:
                         sss += 1
                         print("sample Nr. %d" % sss)
-                        strline = "%f %f     " % (sign, weight)
+                        strline = "%f %f %f %f     " % (BSS_sign, BSS_weight, sign, weight)
                         for b in occ_vector:
                             strline += str(b)+' '
                         out_fh[species].write(strline+'\n')

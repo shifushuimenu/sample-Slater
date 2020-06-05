@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
     Read in a sequence of equal-time single-particle  Green\'s functions
-    output from the ALF DQMC code.
+    output from the QUEST DQMC code. 
 """
 
 import numpy as np
