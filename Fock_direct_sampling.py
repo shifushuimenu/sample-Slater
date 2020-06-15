@@ -60,8 +60,8 @@ skip = args.skip
 print("rank %5.5d of %5.5d" % (MPI_rank, MPI_size))
 
 # input file with Green's functions 
-Green_infile = ('Green_ncpu%5.5d_up.dat' % (MPI_rank),
-                'Green_ncpu%5.5d_dn.dat' % (MPI_rank))
+Green_infile = ('GreenF_ncpu%5.5d_up.dat' % (MPI_rank),
+                'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank))
 
 # output file for sampled Fock states 
 outfile = ('Fock_samples_ncpu%5.5d_up.dat' % (MPI_rank),

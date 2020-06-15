@@ -18,7 +18,7 @@ def sample_Poisson(G, Nsamples):
                for a fermionic pseudo density matrix \\rho. 
             Nsamples: Number of occupation number configurations to be generated
        Output:
-            A Fock state of occupation numbers
+            A Fock state of occupation numbers [generator object]
     """
     G = np.array(G, dtype=np.float64)
     assert(len(G.shape) == 2)

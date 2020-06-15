@@ -66,7 +66,7 @@ Green_infile = ('GreenF_ncpu%5.5d_up.dat' % (MPI_rank),
                 'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank))
 # Check that the files exist.                               
 if not np.all([os.path.isfile(f) for f in Green_infile]):
-    print("Green's function files not found.")
+    print("Green's function files not found:", Green_infile)
     exit()
 
 ss = 0
@@ -107,7 +107,7 @@ with open(Green_infile[0]) as fh_up:
 
                 for species in np.arange(N_spin_species):
                     print("===========================")
-                    print("species=%d"%(species))
+                    print("counter=%d, species=%d"%(counter, species))
                     # generator object
                     generate_Fock_states = sample_FF_GreensFunction(G=G[species][np.ix_(
                         sitesA, sitesA)], Nsamples=Nsamples_per_HS, update_type='low-rank')

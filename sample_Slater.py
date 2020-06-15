@@ -4,7 +4,7 @@ import numpy as np
 import sys 
 
 from scipy import linalg, allclose
-# from profilehooks import profile # python2.7
+from profilehooks import profile # python2.7
 
 from test_suite import prepare_test_system_zeroT
 
@@ -172,12 +172,14 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
     return occ_vec
 
 
+@profile
 def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     """
-       Component-wise sampling of site occupations from a *spinless* free fermion
+       Component-wise direct sampling of site occupations from a *spinless* free fermion
        pseudo density matrix in the grand-canonical ensemble.
 
-       Input: 
+       Parameters:
+       ----------- 
             G: Free fermion Green's function G_ij = Tr( \\rho c_i c_j^{\\dagger} )
                for a fermionic pseudo density matrix \\rho. 
             Nsamples: Number of occupation number configurations to be generated
@@ -186,7 +188,8 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
                Update the correction due to inter-site correlations either by inverting 
                a matrix or by a more efficient low-rank update which avoids matrix 
                inversion altogether.
-       Output:
+       Returns:
+       --------
             A Fock state of occupation numbers sampled from the input free-fermion 
             pseudo density matrix.
             The Fock state carries a sign as well as a reweighting factor, which takes 
@@ -260,7 +263,7 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             occ_vector = occ_vector + list([occ])   
 
             if (update_type == 'low-rank'):
-                # Avoid computation of determiants and inverses altogether
+                # Avoid computation of determinants and inverses altogether
                 # by utilizing the formulae for determinant and inverse of 
                 # block matrices. 
                 # Compute Xinv based on the previous Xinv. 

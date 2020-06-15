@@ -60,8 +60,8 @@ Green_infile = ('Green_ncpu%5.5d_up.dat' % (MPI_rank),
                 'Green_ncpu%5.5d_dn.dat' % (MPI_rank))
 
 # output file for sampled Fock states 
-outfile = ('Fock_samples_ncpu%5.5d_up.dat' % (MPI_rank),
-           'Fock_samples_ncpu%5.5d_dn.dat' % (MPI_rank))
+outfile = ('Fock_samplesPoisson_ncpu%5.5d_up.dat' % (MPI_rank),
+           'Fock_samplesPoisson_ncpu%5.5d_dn.dat' % (MPI_rank))
 for s in np.arange(N_spin_species):
     out_fh = open(outfile[s], 'w')
     out_fh.write("# sign   |    reweighting factor   |   occupation vector (one spin species only) \n#\n")

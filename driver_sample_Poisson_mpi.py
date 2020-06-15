@@ -3,6 +3,8 @@
 """
     Sample Fock states from a stream of Green's functions for different Hubbard-Stratonovich 
     field configurations, for two spin species. 
+    Take the diagonal elements of the Green's function as the probabilities for Poissonian
+    sampling, i.e. each site is sampled independently. 
 """
 
 import numpy as np
@@ -27,7 +29,7 @@ MPI_size = comm.Get_size()
 
 parser = argparse.ArgumentParser(
     description="Sample Fock states ('snapshots') from fermionic pseudo-density matrices\
-        *à la Scalettar*. The Green's functions\
+        *à la Poisson*. The Green's functions\
         are assumed to be stored in the two synchronized files\
             `'GreenF_ncpu%5.5d_up.dat' % (MPI_rank)` and\
             `'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank)`\
