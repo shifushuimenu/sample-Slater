@@ -15,6 +15,7 @@ import resource
 import os 
 
 from mpi4py import MPI
+from MPI_parallel import * # make `MPI_rank` globally available
 import argparse
 
 from sample_Slater import sample_FF_GreensFunction

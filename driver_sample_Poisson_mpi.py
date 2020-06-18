@@ -14,6 +14,7 @@ import resource
 import os 
 
 from mpi4py import MPI
+from MPI_parallel import * 
 import argparse
 
 # from sample_Slater import sample_FF_GreensFunction

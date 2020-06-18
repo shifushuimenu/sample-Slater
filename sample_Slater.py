@@ -1,5 +1,8 @@
 #!/usr/bin/python3.5
 
+# TODO:
+# - Remove storage of cumul_reweighting_factor
+
 import numpy as np
 import sys 
 
@@ -172,7 +175,7 @@ def sample_nonorthogonal_SlaterDeterminant(U, singular_values, Vh, nu_rndvec):
     return occ_vec
 
 
-@profile
+#@profile
 def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
     """
        Component-wise direct sampling of site occupations from a *spinless* free fermion
@@ -196,6 +199,8 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             care of the sign problem (type I), which is due to the fact that the pseudo density 
             matrix is non-Hermitian.
     """
+    from MPI_parallel import MPI_rank
+
     G = np.array(G, dtype=np.float64)
     assert(len(G.shape) == 2)
     assert(G.shape[0] == G.shape[1])
@@ -205,6 +210,11 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
 
     corr = np.zeros(D, dtype = np.float64)
     cond_prob = np.zeros(2, dtype = np.float64)
+
+    ## remove
+    ## store the accumulated reweighting factor for each sampling step 
+    #cumul_reweighting_factor = np.ones(D, dtype = np.float64)
+    ## remove
 
     #print("==========================")
     for ss in np.arange(Nsamples):
@@ -223,6 +233,11 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             occ_vector = [0]
         #print("k=%d, <n_k>=%f"%(k, 1-G[k,k]))
         occ = occ_vector[0]
+        
+        ## remove 
+        #cumul_reweighting_factor[k] = reweighting_factor
+        ## remove 
+
         Xinv = np.zeros((1,1), dtype=np.float64)
         Xinv[0,0] = 1.0/(G[0,0] - occ)
         # Component-wise direct sampling  (k=1,...,D-1)
@@ -262,6 +277,8 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
 
             occ_vector = occ_vector + list([occ])   
 
+            ##cumul_reweighting_factor[k] = reweighting_factor
+
             if (update_type == 'low-rank'):
                 # Avoid computation of determinants and inverses altogether
                 # by utilizing the formulae for determinant and inverse of 
@@ -280,6 +297,13 @@ def sample_FF_GreensFunction(G, Nsamples, update_type='low-rank'):
             Ksites = Ksites + list([k])
 
         assert(len(occ_vector) == D)
+
+        ##filename='cumul_reweight_ncpu%5.5d.dat' % (MPI_rank)
+        ##with open(filename, 'a') as fh:
+        ##   string = ''
+        ##   for f in cumul_reweighting_factor:
+        ##       string += str(f) + '\t'
+        ##   fh.write(string + '\n')
 
         yield np.array(occ_vector), sign, reweighting_factor
 
