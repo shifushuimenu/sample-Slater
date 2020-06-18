@@ -32,8 +32,8 @@ parser = argparse.ArgumentParser(
     description="Sample Fock states ('snapshots') from fermionic pseudo-density matrices\
         as they arise naturally in finite-temperature determinantal QMC. The Green's functions\
         are assumed to be stored in the two synchronized files\
-            `'GreenF_ncpu%5.5d_up.dat' % (MPI_rank)` and\
-            `'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank)`\
+            `'Green_ncpu%5.5d_up.dat' % (MPI_rank)` and\
+            `'Green_ncpu%5.5d_dn.dat' % (MPI_rank)`\
         with different HS samples separated by two empty lines and `MPI_rank` labelling\
         independent Markov chains.")
 parser.add_argument("NsitesA", type=int, 
@@ -61,8 +61,8 @@ skip = args.skip
 print("rank %5.5d of %5.5d" % (MPI_rank, MPI_size))
 
 # input file with Green's functions 
-Green_infile = ('GreenF_ncpu%5.5d_up.dat' % (MPI_rank),
-                'GreenF_ncpu%5.5d_dn.dat' % (MPI_rank))
+Green_infile = ('Green_ncpu%5.5d_up.dat' % (MPI_rank),
+                'Green_ncpu%5.5d_dn.dat' % (MPI_rank))
 
 # output file for sampled Fock states 
 outfile = ('Fock_samples_ncpu%5.5d_up.dat' % (MPI_rank),
