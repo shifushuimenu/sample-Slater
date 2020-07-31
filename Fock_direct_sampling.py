@@ -72,7 +72,7 @@ for s in np.arange(N_spin_species):
     out_fh.write("# The sampling of a pseudofermion density matrix results in a sign problem (type I).")
     out_fh.write("# Additionally there may be a sign problem arising from the BSS algorithm itself (type II).")
     out_fh.write("# The weight of a Hubbard-Stratonovich configuration (BSS weight) is not needed.")
-    out_fh.write("# It is output anyways to check for numerical overflow, which would make the reported sign invalid.")
+    out_fh.write("# It is output anyways to check for numerical overflow, which would make the reported sign invalid.\n")
     out_fh.write("# BSS sign (type II)  |   BSS weight  |   sign (type I )  |   reweighting factor   |   occupation vector (one spin species only) \n#\n")
     out_fh.close()
 
@@ -102,26 +102,26 @@ Fock_states_updn = np.zeros(
 weight_updn = np.zeros((N_spin_species, Nsamples_per_HS), dtype=np.float64)
 sign_updn = np.zeros((N_spin_species, Nsamples_per_HS), dtype=np.int8)
 
-with open(Green_infile[0]) as fh_up:
-    with open(Green_infile[1]) as fh_dn:
-        for counter, G in enumerate(read_GreenF_spinful((fh_up, fh_dn), dtype=np.float64)):
-            if (counter < skip):
-                continue
-            if (counter >= max_HS_samples):
-                break
+with open(Green_infile[0]) as fh_up, open(Green_infile[1]) as fh_dn:
+    for counter, G in enumerate(read_GreenF_spinful((fh_up, fh_dn), dtype=np.float64)):
+        if (counter < skip):
+            continue
+        if (counter >= max_HS_samples):
+            break
 
-            # If the Hamiltonian itself already exhibits a sign problem 
-            # (sign problem of type II), then the Fock states generated in the 
-            # sampling procedure need to be reweighted. 
-            # 'BSS' stands for Blankenbecler-Scalapino-Sugar as in the BSS algorithm. 
-            BSS_weight = 1.0
-            for species in np.arange(N_spin_species):
-                BSS_weight *= linalg.det(np.eye(*G[species].shape) + G[species])
-            BSS_sign = np.sign(BSS_weight)               
+        # If the Hamiltonian itself already exhibits a sign problem 
+        # (sign problem of type II), then the Fock states generated in the 
+        # sampling procedure need to be reweighted. 
+        # 'BSS' stands for Blankenbecler-Scalapino-Sugar as in the BSS algorithm. 
+        BSS_weight = 1.0
+        for species in np.arange(N_spin_species):
+            BSS_weight *= linalg.det(np.eye(*G[species].shape) + G[species])
+        BSS_sign = np.sign(BSS_weight)               
 
-            ss_HS += 1 
+        ss_HS += 1 
 
-            out_fh = (open(outfile[0], 'a'), open(outfile[1], 'a'))
+        out_fh = ['','']
+        with open(outfile[0], 'a') as out_fh[0], open(outfile[1], 'a') as out_fh[1]:
             # Sample different subsystems A (or the whole system)
             for sitesA in list_of_sitearrays:
                 for species in np.arange(N_spin_species):
@@ -135,9 +135,6 @@ with open(Green_infile[0]) as fh_up:
                         sss += 1
                         print("sample Nr. %d" % sss)
                         strline = "%f %f %f %f     " % (BSS_sign, BSS_weight, sign, weight)
-                        for b in occ_vector:
-                            strline += str(b)+' '
-                        out_fh[species].write(strline+'\n')
+                        strline += ' '.join( map(str, occ_vector) ) + '\n'
 
-            out_fh[0].close()
-            out_fh[1].close()                        
+                        out_fh[species].write(strline)
