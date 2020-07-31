@@ -7,7 +7,7 @@ import numpy as np
 import sys 
 
 from scipy import linalg, allclose
-from profilehooks import profile # python2.7
+# from profilehooks import profile # module exists only in python3
 
 from test_suite import prepare_test_system_zeroT
 
