@@ -11,6 +11,18 @@ from scipy import linalg, allclose
 
 from test_suite import prepare_test_system_zeroT
 
+__all__ = [
+    'unit', 
+    'Slater2spOBDM',
+    'sample_SlaterDeterminant',
+    'sample_FF_GreensFunction',
+    'rotate_GreensFunction',
+    'sample_expmX',
+    'normalize',
+    'prob2cumul',
+    'bisection_search'
+]
+
 
 def unit(i, M):
     """

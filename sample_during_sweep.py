@@ -116,17 +116,18 @@ class Sampler( object ):
         
         Initializes output files. 
     """
-    def __init__(self, Hub, Nsamples_per_HS, list_of_sitearrays, outfiles):
-        assert( isinstance(Hub, Hubbard) )
-        assert( len(outfiles) == Hub.Nspecies )
+    def __init__(self, Nsamples_per_HS, list_of_sitearrays, outfiles):
+        Nspecies = 2
+        assert( len(outfiles) == Nspecies )
         assert( len(list_of_sitearrays) == 1 ) # temporary restriction (only sample the full system since it is small anyway) => IMPROVE
         self.Nsamples_per_HS = Nsamples_per_HS
         self.list_of_sitearrays = list_of_sitearrays
         self.outfiles = outfiles
         
         # write header to outfiles (overwriting previous content) 
+        fh = ['','']
         with open(self.outfiles[0], 'w') as fh[0], open(self.outfiles[1], 'w') as fh[1]:
-            for s in np.arange(Hub.Nspecies):
+            for s in np.arange(Nspecies):
                 header  = "# The sampling of a pseudofermion density matrix results in a sign problem (type I)."
                 header += "# Additionally there may be a sign problem arising from the BSS algorithm itself (type II)."
                 header += "# BSS_sign | sampling sign (real part) | sampling sign (imag. part) "
@@ -134,7 +135,7 @@ class Sampler( object ):
                 fh[s].write(header)
     
     
-def sample_during_sweep(Hub, G, Sparam):
+def sample_during_sweep(G, Sparam):
     """
         Perform direct componentwise sampling at a given 
         imaginary time slice for which the equal-time Green's functions 
@@ -145,8 +146,10 @@ def sample_during_sweep(Hub, G, Sparam):
             with the desired number of samples per HS configuration
             and the names of the output files. 
     """
-    assert(isinstance(Hub, Hubbard))
-    assert(len(G) == Hub.Nspecies)
+    from numpy import linalg 
+    
+    Nspecies = 2
+    assert(len(G) == Nspecies)
     assert( all( G[i].shape == G[i+1].shape for i in np.arange(len(G)-1) ) )
     assert(isinstance(Sparam, Sampler))
     
@@ -155,7 +158,7 @@ def sample_during_sweep(Hub, G, Sparam):
     # sampling procedure need to be reweighted. 
     # 'BSS' stands for Blankenbecler-Scalapino-Sugar as in the BSS algorithm. 
     BSS_weight = 1.0
-    for species in np.arange(Hub.Nspecies):
+    for species in np.arange(Nspecies):
         BSS_weight *= linalg.det(np.eye(*G[species].shape) + G[species])
     BSS_sign = np.sign(BSS_weight)
     
@@ -163,7 +166,7 @@ def sample_during_sweep(Hub, G, Sparam):
     with open(Sparam.outfiles[0], 'a') as out_fh[0], open(Sparam.outfiles[1], 'a') as out_fh[1]:            
         # Sample different subsystems A (or the whole system)
         for sitesA in Sparam.list_of_sitearrays:
-            for species in np.arange(Hub.Nspecies):
+            for species in np.arange(Nspecies):
                 # generator object
                 generate_Fock_states = sample_FF_GreensFunction(G=G[species][np.ix_(
                     sitesA, sitesA)], Nsamples=Sparam.Nsamples_per_HS, update_type='low-rank')
